@@ -137,8 +137,16 @@ local function parse_decls(body)
           set("background-color", color)
         end
       elseif prop == "flex" then
-        local grow = value:match("^([%d%.]+)")
-        set("flex-grow", grow or "1")
+        -- `none` and `auto` are keywords, not numbers: parsing them as "1"
+        -- silently grew items the author had pinned.
+        if value == "none" then
+          set("flex-grow", "0")
+        elseif value == "auto" then
+          set("flex-grow", "1")
+        else
+          local grow = value:match("^([%d%.]+)")
+          set("flex-grow", grow or "1")
+        end
       elseif prop == "gap" then
         set("gap", value)
         set("row-gap", value)

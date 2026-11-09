@@ -112,18 +112,49 @@ local function max_content(node, st, ctx, limit)
     end
     w = total
   else
+    -- Inline content is one line: the text on either side of a <span> or a
+    -- <code> adds up, it does not restart. Measuring each text node alone made
+    -- every flex item that mixed text and inline tags far too narrow.
+    local line = 0
+    local function commit()
+      w = math.max(w, line)
+      line = 0
+    end
     for _, child in ipairs(node.children or {}) do
       if child.type == "text" then
-        for line in (child.text .. "\n"):gmatch("(.-)\n") do
-          w = math.max(w, ctx.width(line))
+        -- A text node only ends a line on a newline it actually contains: the
+        -- space before a <span> belongs to the same line as the span's text.
+        local raw = child.text
+        if st.white_space ~= "pre" then
+          raw = raw:gsub("[\r\n]+", " ")
+        end
+        local from = 1
+        while true do
+          local nl = raw:find("\n", from, true)
+          if not nl then
+            line = line + ctx.width(raw:sub(from))
+            break
+          end
+          line = line + ctx.width(raw:sub(from, nl - 1))
+          commit()
+          from = nl + 1
         end
       else
         local cst = ctx.styles[child]
+        local cst = ctx.styles[child]
         if cst and cst.display ~= "none" then
-          w = math.max(w, max_content(child, cst, ctx, limit))
+          if child.tag == "br" then
+            commit()
+          elseif cst.display == "inline" or cst.display == "inline-block" then
+            line = line + max_content(child, cst, ctx, limit)
+          else
+            commit()
+            w = math.max(w, max_content(child, cst, ctx, limit))
+          end
         end
       end
     end
+    commit()
   end
   -- Round each side like layout_node does, otherwise a 12px padding can add
   -- 3 cells here and 4 there, and the text wraps in a box measured wide enough.
@@ -427,6 +458,37 @@ local function layout_flow(node, st, ix, iy, iw, ctx, box)
   return cursor - iy
 end
 
+-- Text sitting directly in a flex container is an anonymous block box: it
+-- inherits typography from the container but none of its box decoration. Laying
+-- it out with the container's own style instead re-entered layout_flex with a
+-- fresh text child until the Lua stack overflowed.
+local function anonymous_block_style(st)
+  local copy = {}
+  for k, v in pairs(st) do
+    copy[k] = v
+  end
+  copy.display = "block"
+  copy.position = "static"
+  copy.width = nil
+  copy.height = nil
+  copy.min_height = nil
+  copy.max_height = nil
+  copy.flex_grow = 0
+  copy.background = nil
+  copy.background_image = nil
+  copy.border_width = "0"
+  copy.border_radius = 0
+  copy.padding_top = "0"
+  copy.padding_right = "0"
+  copy.padding_bottom = "0"
+  copy.padding_left = "0"
+  copy.margin_top = "0"
+  copy.margin_right = "0"
+  copy.margin_bottom = "0"
+  copy.margin_left = "0"
+  return copy
+end
+
 local function layout_flex(node, st, ix, iy, iw, ctx, box)
   local kids = {}
   for _, child in ipairs(node.children or {}) do
@@ -436,7 +498,7 @@ local function layout_flex(node, st, ix, iy, iw, ctx, box)
         kids[#kids + 1] = { node = child, st = cst }
       end
     elseif child.type == "text" and child.text:match("%S") then
-      kids[#kids + 1] = { text = child.text, st = st }
+      kids[#kids + 1] = { text = child.text, st = anonymous_block_style(st) }
     end
   end
   if #kids == 0 then
@@ -470,7 +532,7 @@ local function layout_flex(node, st, ix, iy, iw, ctx, box)
       local target = k.node
       if not target then
         target = {
-          type = "element", tag = "#text", attrs = {},
+          type = "element", tag = "#text", attrs = {}, parent = node,
           children = { { type = "text", text = k.text } },
         }
       end
@@ -536,7 +598,7 @@ local function layout_flex(node, st, ix, iy, iw, ctx, box)
     local target = k.node
     if not target then
       target = {
-        type = "element", tag = "#text", attrs = {},
+        type = "element", tag = "#text", attrs = {}, parent = node,
         children = { { type = "text", text = k.text } },
       }
     end

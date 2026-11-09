@@ -112,6 +112,28 @@ local function run_suite()
     eq(styles[find(root, "div")].color, "#123456", "var resolved")
   end)
 
+  -- `flex` keywords are not lengths: reading them as grow: 1 pinned items grow
+  -- silently, and the design only looked "a bit off".
+  case("css: flex keywords do not become flex-grow", function()
+    local root = dom.parse([[
+      <style>.n { flex: none } .a { flex: auto }</style>
+      <div class="n">a</div><div class="a">b</div>
+    ]])
+    local author = css.prepare(root)
+    local styles = css.compute(root, author)
+    local grows = {}
+    for node, st in pairs(styles) do
+      if node.type == "element" and node.attrs then
+        local cls = node.attrs["class"]
+        if cls == "n" or cls == "a" then
+          grows[cls] = st.flex_grow
+        end
+      end
+    end
+    eq(grows.n, 0, "flex:none pins the item")
+    eq(grows.a, 1, "flex:auto grows")
+  end)
+
   case("css: unknown properties are reported", function()
     local root = dom.parse([[<div style="box-shadow: 0 0 4px red">x</div>]])
     local author = css.prepare(root)
@@ -164,6 +186,45 @@ local function run_suite()
     eq(#flex.children, 2, "two children")
     truthy(flex.children[2].x > flex.children[1].x, "second child to the right")
     truthy(flex.children[1].w >= 5, "first child grew")
+  end)
+
+  -- Inline runs on either side of a tag belong to one line; measuring each text
+  -- node alone made flex items that mix text and inline tags too narrow.
+  case("layout: intrinsic width adds inline runs", function()
+    local built = build([[
+      <div style="display: flex"><div>ab <span>cd</span> ef</div><div style="width: 20px"></div></div>
+    ]], 40, 10)
+    local row
+    for _, box in ipairs(built.boxes) do
+      if box.style.display == "flex" then
+        row = box
+      end
+    end
+    truthy(row, "flex row")
+    eq(row.children[1].w, 8, "text and span measured on one line")
+  end)
+
+  -- Bare text in a flex container is an anonymous block box: it must lay out as
+  -- text, and it must not repaint the container's own frame.
+  case("layout: bare text inside a flex container", function()
+    local built = build([[
+      <div style="display: flex; gap: 8px; border: 1px solid #ffffff;
+                  padding: 8px; background: #112233">ab <span>cd</span></div>
+    ]], 20, 10)
+    local flex
+    for _, box in ipairs(built.boxes) do
+      if box.style.display == "flex" then
+        flex = box
+      end
+    end
+    truthy(flex, "flex box")
+    eq(#flex.children, 2, "anonymous text box plus the span")
+    local anon = flex.children[1]
+    eq(anon.style.display, "block", "text laid out as a block")
+    eq(anon.w, 3, "text keeps its own width")
+    eq(anon.style.border_width, "0", "no duplicated border")
+    eq(anon.style.background, nil, "no duplicated background")
+    truthy(anon.x > flex.x, "text sits inside the container padding")
   end)
 
   local function find_box(built, tag)
