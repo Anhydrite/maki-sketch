@@ -448,9 +448,15 @@ pane.on_key = function(sid, key)
     return
   end
   local page = math.max(1, math.floor((scene.view_rows or 10) / 2))
-  if key == "<M-j>" or key == "<M-Down>" or key == "<S-Down>" then
+  -- Alt+arrows are the shortcut the footer advertises: one notch, like a wheel
+  -- tick. Shift+arrows stay at a single line for fine placement.
+  if key == "<M-Down>" then
+    scroll_by(sid, 3)
+  elseif key == "<M-Up>" then
+    scroll_by(sid, -3)
+  elseif key == "<M-j>" or key == "<S-Down>" then
     scroll_by(sid, 1)
-  elseif key == "<M-k>" or key == "<M-Up>" or key == "<S-Up>" then
+  elseif key == "<M-k>" or key == "<S-Up>" then
     scroll_by(sid, -1)
   elseif key == "<M-d>" or key == "<M-PageDown>" or key == "<PageDown>" then
     scroll_by(sid, page)

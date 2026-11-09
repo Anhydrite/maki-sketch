@@ -170,7 +170,7 @@ function M.ensure(sid, opts)
       border = "rounded",
       focus = false,
       keys = SCROLL_KEYS,
-      footer = { { "PgDn · M-j", "scroll" }, { "clic cadre", "page" } },
+      footer = { { "Alt+↑/↓", "scroll" }, { "clic cadre", "page" } },
       title = " sketch ",
       title_pos = "left",
       session = sid,

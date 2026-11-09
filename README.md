@@ -44,9 +44,9 @@ wireframe or a diagram.
 /sketch export          write the HTML
 ```
 
-While the pane is open: `PageUp`/`PageDown` scroll half a page, `M-j`/`M-k` (Alt
-+ letter) one line, `M-d`/`M-u` half a page, `M-g`/`M-G` top and bottom,
-`S-Up`/`S-Down` one line. maki delivers no wheel event to plugin windows, so a
+While the pane is open: `Alt+↑`/`Alt+↓` scroll one line (`PgDn`/`PgUp` half a
+page, `M-d`/`M-u` half a page, `M-g`/`M-G` top and bottom, `S-Up`/`S-Down` one
+line). maki delivers no wheel event to plugin windows, so a
 click on the pane's frame pages the design instead (the wheel case is handled
 anyway, should maki ever forward it).
 
