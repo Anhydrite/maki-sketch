@@ -1,13 +1,12 @@
 min_maki_version = "0.7.0"
 
 # A managed package requests exactly what its manifest lists. Keep this list
-# minimal: the canvas needs to read its own files, save `.sketch/`, and write
-# `#N` into the chat input. `run` is for the browser engine, which starts
-# carbonyl under tmux and captures the frame.
+# minimal: the canvas reads its own files, saves `.sketch/`, reads the session
+# and writes `#N` into the chat input. `env` is only for the headless
+# self-test in development.
 [permissions]
 fs_read = true
 fs_write = true
-run = true
 env = true
 agent = true
 session_read = true
