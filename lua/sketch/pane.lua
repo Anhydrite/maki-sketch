@@ -27,6 +27,8 @@ end
 -- Claimed while the pane is open: Alt chords scroll the design without
 -- stealing the plain keys the chat input needs.
 local SCROLL_KEYS = {
+  -- Alt chords, plus the keys a reader reaches for first: PageUp/PageDown and
+  -- Shift+arrows. Claiming the plain arrows would eat the chat input history.
   "<M-j>",
   "<M-k>",
   "<M-Down>",
@@ -37,6 +39,10 @@ local SCROLL_KEYS = {
   "<M-PageUp>",
   "<M-g>",
   "<M-G>",
+  "<PageDown>",
+  "<PageUp>",
+  "<S-Down>",
+  "<S-Up>",
 }
 
 -- The click handler is (re)attached on every update: a pane created by an
@@ -164,7 +170,7 @@ function M.ensure(sid, opts)
       border = "rounded",
       focus = false,
       keys = SCROLL_KEYS,
-      footer = { { "M-j/k", "scroll" }, { "clic cadre", "page" } },
+      footer = { { "PgDn · M-j", "scroll" }, { "clic cadre", "page" } },
       title = " sketch ",
       title_pos = "left",
       session = sid,
