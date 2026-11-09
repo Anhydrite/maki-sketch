@@ -8,6 +8,7 @@ local css = require("sketch.css")
 local layout = require("sketch.layout")
 local paint = require("sketch.paint")
 local points = require("sketch.points")
+local input = require("sketch.input")
 local text = require("sketch.text")
 local render = require("sketch.render")
 
@@ -265,6 +266,20 @@ two</pre>]], 20, 10)
       count = count + 1
     end
     truthy(count >= 2, "two rows in pre")
+  end)
+
+  -- Input ------------------------------------------------------------------
+
+  -- A wheel tick scrolls; it must never be mistaken for a pick. Both delivery
+  -- shapes maki can use are normalised here.
+  case("input: wheel ticks normalise to a row delta", function()
+    eq(input.wheel_delta({ button = 64 }), -3, "SGR wheel up")
+    eq(input.wheel_delta({ button = 65 }), 3, "SGR wheel down")
+    eq(input.wheel_delta({ kind = "ScrollUp" }), -3, "kind scroll up")
+    eq(input.wheel_delta({ kind = "scroll-down" }), 3, "kind scroll down")
+    eq(input.wheel_delta({ button = "ScrollUp" }), -3, "button as a word")
+    eq(input.wheel_delta({ button = 1, row = 4 }), nil, "a plain click is not a scroll")
+    eq(input.wheel_delta(nil), nil, "no event")
   end)
 
   -- Paint ----------------------------------------------------------------

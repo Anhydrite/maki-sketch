@@ -44,8 +44,8 @@ wireframe or a diagram.
 /sketch export          write the HTML
 ```
 
-While the pane is open: `M-j`/`M-k` scroll one line, `M-d`/`M-u` half a page,
-`M-g`/`M-G` top and bottom.
+While the pane is open: the mouse wheel scrolls three lines per tick, `M-j`/`M-k`
+one line, `M-d`/`M-u` half a page, `M-g`/`M-G` top and bottom.
 
 ## Notes
 

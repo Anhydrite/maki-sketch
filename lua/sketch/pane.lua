@@ -3,12 +3,26 @@
 
 local M = {}
 
+local input = require("sketch.input")
+
 local states = {}
 
 -- Callbacks set by sketch.lua.
 M.on_click = nil
 M.on_resize = nil
 M.on_key = nil
+M.on_scroll = nil
+
+local function fire_scroll(sid, delta)
+  if not delta or not M.on_scroll then
+    return false
+  end
+  local ok, err = pcall(M.on_scroll, sid, delta)
+  if not ok then
+    maki.log.warn("sketch: scroll handler failed: " .. tostring(err))
+  end
+  return true
+end
 
 -- Claimed while the pane is open: Alt chords scroll the design without
 -- stealing the plain keys the chat input needs.
@@ -34,6 +48,11 @@ local function attach_click(s, sid)
   end
   s.buf:on("click", function(ev)
     local row = ev and ev.row or 0
+    -- A wheel tick can arrive as a click carrying the SGR button number: it
+    -- scrolls, it does not pick whatever point sits under the pointer.
+    if fire_scroll(sid, input.wheel_delta(ev)) then
+      return
+    end
     local ok, dump = pcall(maki.json.encode, ev or {})
     maki.log.debug("sketch: click " .. (ok and dump or "?"))
     if row <= 0 then
@@ -90,7 +109,7 @@ function M.ensure(sid, opts)
       border = "rounded",
       focus = false,
       keys = SCROLL_KEYS,
-      footer = { { "M-j/k", "scroll" }, { "M-d/u", "page" } },
+      footer = { { "molette · M-j/k", "scroll" }, { "M-d/u", "page" } },
       title = " sketch ",
       title_pos = "left",
       session = sid,
@@ -139,6 +158,8 @@ function M.ensure(sid, opts)
               maki.log.warn("sketch: key handler failed: " .. tostring(perr))
             end
           end
+        elseif ev.type == "mouse" or ev.type == "scroll" then
+          fire_scroll(sid, input.wheel_delta(ev))
         elseif ev.type == "close" then
           break
         end

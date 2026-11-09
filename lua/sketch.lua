@@ -463,6 +463,10 @@ pane.on_key = function(sid, key)
   end
 end
 
+pane.on_scroll = function(sid, delta)
+  scroll_by(sid, delta)
+end
+
 pane.on_click = function(sid, row)
   local scene = scenes[sid]
   if not scene or row < 1 then
