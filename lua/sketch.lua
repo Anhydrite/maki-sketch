@@ -469,7 +469,22 @@ end
 
 pane.on_click = function(sid, row)
   local scene = scenes[sid]
-  if not scene or row < 1 then
+  if not scene then
+    return
+  end
+  if not row or row < 1 then
+    -- Frame click: maki hands plugins no wheel event, so this is the pointer's
+    -- page control. It wraps so a second click never dead-ends.
+    local max = scene.max_offset or 0
+    if max <= 0 then
+      pcall(maki.ui.flash, "sketch: le design tient dans le canvas")
+      return
+    end
+    if (scene.offset or 0) >= max then
+      scroll_to(sid, 0)
+    else
+      scroll_by(sid, math.max(1, math.floor((scene.view_rows or 10) / 2)))
+    end
     return
   end
   local list = scene.row_map[row]

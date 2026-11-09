@@ -56,7 +56,16 @@ local function attach_click(s, sid)
     local ok, dump = pcall(maki.json.encode, ev or {})
     maki.log.debug("sketch: click " .. (ok and dump or "?"))
     if row <= 0 then
-      pcall(maki.ui.flash, "sketch: click outside the canvas")
+      -- maki exposes clicks only (no wheel event reaches a plugin window), so
+      -- the frame is the mouse's page control: clicking it pages the design.
+      if M.on_click then
+        local pok, perr = pcall(M.on_click, sid, 0)
+        if not pok then
+          maki.log.warn("sketch: click handler failed: " .. tostring(perr))
+        end
+      else
+        pcall(maki.ui.flash, "sketch: click outside the canvas")
+      end
       return
     end
     if M.on_click then
@@ -109,7 +118,7 @@ function M.ensure(sid, opts)
       border = "rounded",
       focus = false,
       keys = SCROLL_KEYS,
-      footer = { { "molette · M-j/k", "scroll" }, { "M-d/u", "page" } },
+      footer = { { "M-j/k", "scroll" }, { "clic cadre", "page" } },
       title = " sketch ",
       title_pos = "left",
       session = sid,
