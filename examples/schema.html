@@ -1,0 +1,30 @@
+<div style="background-color:#0b0e14; padding:12px; color:#e6edf3">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+    <div style="display:flex; gap:10px; align-items:center">
+      <span style="font-size:20px; font-weight:bold">Data model</span>
+      <span style="color:#8b949e">accounts &amp; billing</span>
+    </div>
+    <span style="background-color:#151a23; border:1px solid #232a36; padding:2px 8px; color:#8b949e">v4</span>
+  </div>
+  <pre style="color:#c9d1d9; font-size:14px; margin:0">┌──────────────────┐         ┌──────────────────┐         ┌──────────────────┐
+│ users            │         │ memberships      │         │ teams            │
+├──────────────────┤         ├──────────────────┤         ├──────────────────┤
+│ id            PK │ 1     N │ user_id       FK │ N     1 │ id            PK │
+│ email            │◄────────┤ team_id       FK ├────────►│ name             │
+│ name             │         │ role             │         │ plan             │
+│ created_at       │         │ invited_at       │         │ created_at       │
+└──────────────────┘         └──────────────────┘         └──────────────────┘
+                                      │
+                                      │ N
+                                      ▼ 1
+                            ┌──────────────────┐
+                            │ invitations      │
+                            ├──────────────────┤
+                            │ id            PK │
+                            │ team_id       FK │
+                            │ email            │
+                            │ status           │
+                            └──────────────────┘
+</pre>
+  <div style="color:#8b949e; font-size:12px; margin-top:8px">PK primary key &middot; FK foreign key &middot; 1 ── N one-to-many</div>
+</div>

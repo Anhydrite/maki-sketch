@@ -1,0 +1,4 @@
+.sketch/
+*.log
+__pycache__/
+*.pyc
