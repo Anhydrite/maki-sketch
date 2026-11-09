@@ -104,6 +104,52 @@ function M.get(sid)
   return states[sid]
 end
 
+-- Resize, keys and scroll arrive through `win:recv`, so the window needs a
+-- listener for as long as it is open. `recv` blocks, hence a task. Every
+-- update bumps the token and re-arms: a task parked or ended when its turn
+-- finished must not leave the pane deaf, and the token retires the older
+-- loop instead of stacking a second one on every render.
+local function listen(sid, s)
+  s.listen_token = (s.listen_token or 0) + 1
+  local token = s.listen_token
+  local win = s.win
+  maki.async.spawn(function()
+    while states[sid] == s and s.listen_token == token and win:is_open() do
+      local rok, ev = pcall(win.recv, win, 500)
+      if not rok or not ev then
+        break
+      end
+      if ev.type == "resize" then
+        -- A split can report a degenerate geometry mid-layout; taking it
+        -- would shrink the canvas to a sliver until the next resize.
+        if ev.width and ev.width >= 20 then
+          s.cols = ev.width
+        end
+        if ev.height and ev.height >= 5 then
+          s.rows = ev.height
+        end
+        if M.on_resize then
+          local pok, perr = pcall(M.on_resize, sid)
+          if not pok then
+            maki.log.warn("sketch: resize handler failed: " .. tostring(perr))
+          end
+        end
+      elseif ev.type == "key" then
+        if M.on_key then
+          local pok, perr = pcall(M.on_key, sid, ev.key)
+          if not pok then
+            maki.log.warn("sketch: key handler failed: " .. tostring(perr))
+          end
+        end
+      elseif ev.type == "mouse" or ev.type == "scroll" then
+        fire_scroll(sid, input.wheel_delta(ev))
+      elseif ev.type == "close" then
+        break
+      end
+    end
+  end)
+end
+
 function M.ensure(sid, opts)
   local s = states[sid]
   if s and s.win and s.win:is_open() then
@@ -137,43 +183,7 @@ function M.ensure(sid, opts)
 
     attach_click(s, sid)
 
-    -- Resize and close events. `recv` needs a coroutine, so it lives in its
-    -- own task; the loop ends with the window or with the plugin state.
-    maki.async.spawn(function()
-      while states[sid] == s and win:is_open() do
-        local rok, ev = pcall(win.recv, win, 500)
-        if not rok or not ev then
-          break
-        end
-        if ev.type == "resize" then
-          -- A split can report a degenerate geometry mid-layout; taking it
-          -- would shrink the canvas to a sliver until the next resize.
-          if ev.width and ev.width >= 20 then
-            s.cols = ev.width
-          end
-          if ev.height and ev.height >= 5 then
-            s.rows = ev.height
-          end
-          if M.on_resize then
-            local pok, perr = pcall(M.on_resize, sid)
-            if not pok then
-              maki.log.warn("sketch: resize handler failed: " .. tostring(perr))
-            end
-          end
-        elseif ev.type == "key" then
-          if M.on_key then
-            local pok, perr = pcall(M.on_key, sid, ev.key)
-            if not pok then
-              maki.log.warn("sketch: key handler failed: " .. tostring(perr))
-            end
-          end
-        elseif ev.type == "mouse" or ev.type == "scroll" then
-          fire_scroll(sid, input.wheel_delta(ev))
-        elseif ev.type == "close" then
-          break
-        end
-      end
-    end)
+    listen(sid, s)
   end)
 
   if not ok then
@@ -190,6 +200,7 @@ function M.update(sid, lines, title, footer)
     return false
   end
   attach_click(s, sid)
+  listen(sid, s)
   s.buf:set_lines(lines)
   if title then
     pcall(s.win.set_config, s.win, { title = title })
@@ -208,6 +219,7 @@ function M.blit(sid, fb, w, h, title)
     return false
   end
   attach_click(s, sid)
+  listen(sid, s)
   local ok = pcall(s.buf.blit, s.buf, fb, w, h, { format = "rgb" })
   if title then
     pcall(s.win.set_config, s.win, { title = title })
